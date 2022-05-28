@@ -4,12 +4,27 @@ use aes::cipher::consts::U16;
 use aes::cipher::generic_array::GenericArray;
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;
+use rand::prelude::*;
 
 const BLK: usize = 16;
 
-pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &[u8]) -> Vec<u8> {
-    let key: GenericArray<u8, U16> = GenericArray::clone_from_slice(key);
-    let cipher = Aes128::new(&key);
+pub struct Key(GenericArray<u8, U16>);
+
+impl Key {
+    pub fn from_slice(key: &[u8]) -> Key {
+        assert_eq!(key.len(), BLK);
+        Key(GenericArray::clone_from_slice(key))
+    }
+
+    pub fn random() -> Key {
+        let mut key = [0u8; BLK];
+        thread_rng().fill(&mut key);
+        Key(key.into())
+    }
+}
+
+pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
+    let cipher = Aes128::new(&key.0);
     let mut last_block: &[u8] = iv;
     let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
     let mut buf: GenericArray<u8, U16> = GenericArray::default();

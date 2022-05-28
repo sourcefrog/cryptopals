@@ -95,6 +95,7 @@ dependencies = [
  "bytes",
  "lazy_static",
  "proptest",
+ "rand",
 ]
 
 [[package]]
