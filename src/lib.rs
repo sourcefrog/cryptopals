@@ -2,6 +2,7 @@
 
 mod base64;
 mod detect;
+pub mod hamming;
 mod hex;
 pub mod xor;
 
