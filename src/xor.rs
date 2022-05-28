@@ -31,6 +31,11 @@ impl Key {
         read.read_to_end(&mut key_bytes)?;
         Ok(Key(key_bytes))
     }
+
+    /// Construct a single-byte key
+    pub fn byte(key_byte: u8) -> Key {
+        Key(vec![key_byte])
+    }
 }
 
 /// Encrypt (or decrypt) text using a key that cycles indefinitely.
@@ -58,8 +63,7 @@ pub fn guess_key_size(ct: &[u8]) -> Vec<usize> {
 }
 
 /// Guess the single-byte key that decodes English text.
-pub fn guess_single_byte_key(ct: &[u8]) -> Option<(u32, u8, String)> {
-    // TODO: Don't return the score or decrypted string; some callers can't use them?
+pub fn guess_single_byte_key(ct: &[u8]) -> Option<(u32, u8)> {
     let (best_score, best_key, best_cand) = (0..0xff)
         .map(|key| {
             let cand: Vec<u8> = ct.iter().map(|c| c ^ key).collect();
@@ -79,7 +83,7 @@ pub fn guess_single_byte_key(ct: &[u8]) -> Option<(u32, u8, String)> {
             "{best_score:7} {best_key:#02x} {}",
             bytes_to_lossy_ascii(&best_cand)
         );
-        Some((best_score, best_key, String::from_utf8(best_cand).unwrap()))
+        Some((best_score, best_key))
     }
 }
 
@@ -94,8 +98,8 @@ pub fn guess_n_byte_key(ct: &[u8], keysize: usize) -> Option<Key> {
     for i in 0..keysize {
         let cts: Vec<u8> = ct.iter().skip(i).step_by(keysize).cloned().collect();
         // println!("cts_{i}: {}", bytes_to_hex(&cts));
-        let (_score, key_byte, _) = guess_single_byte_key(&cts)?;
-        println!("i={i} found key_byte={key_byte:#02x}");
+        let (_score, key_byte) = guess_single_byte_key(&cts)?;
+        // println!("i={i} found key_byte={key_byte:#02x}");
         key.push(key_byte);
     }
     assert_eq!(key.len(), keysize);
@@ -118,8 +122,6 @@ pub fn break_repeating_xor(ct: &[u8]) -> (Key, String) {
         .flat_map(|keysize| guess_n_byte_key(ct, keysize))
         .collect();
     assert!(!keys.is_empty(), "no keys found");
-    // TODO: We might find more than one possible key, and then we could see which
-    // gives the best overall fit?
     if keys.len() != 1 {
         todo!("find which key is the best fit")
     }

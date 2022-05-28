@@ -4,17 +4,27 @@
 
 use std::fs;
 
+use cryptopals::xor::{self, repeating_key_xor};
+
 #[test]
 fn solution_04() {
-    let (score, key, output) = fs::read_to_string("input/4.txt")
+    let (_score, key_byte, clear) = fs::read_to_string("input/4.txt")
         .expect("open input 4")
         .lines()
         .map(|line| cryptopals::hex_to_bytes(line))
-        .flat_map(|line| cryptopals::xor::guess_single_byte_key(&line))
-        .inspect(|(score, key, output)| println!("{:4}  {:#2x} {:?}", score, key, output))
-        .max_by_key(|&(score, _, _)| score)
+        .flat_map(|line| {
+            if let Some((score, key_byte)) = xor::guess_single_byte_key(&line) {
+                Some((
+                    score,
+                    key_byte,
+                    repeating_key_xor(&line, &xor::Key::byte(key_byte)),
+                ))
+            } else {
+                None
+            }
+        })
+        .max()
         .expect("no solution found");
-    println!("{:4}  {:#2x} {:?}", score, key, output);
-    assert_eq!(output, "Now that the party is jumping\n");
-    assert_eq!(key, 0x35);
+    assert_eq!(key_byte, 0x35);
+    assert_eq!(clear, b"Now that the party is jumping\n");
 }
