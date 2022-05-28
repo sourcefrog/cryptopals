@@ -52,6 +52,7 @@ name = "cryptopals"
 version = "0.0.0"
 dependencies = [
  "bytes",
+ "lazy_static",
  "proptest",
 ]
 

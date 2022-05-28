@@ -9,4 +9,5 @@ publish = false
 
 [dependencies]
 bytes = "1.1.0"
+lazy_static = "1.4.0"
 proptest = "1.0.0"

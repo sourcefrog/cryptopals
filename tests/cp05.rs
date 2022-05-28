@@ -2,12 +2,14 @@
 //!
 //! <https://cryptopals.com/sets/1/challenges/5>
 
+use cryptopals::xor;
+
 #[test]
 fn solution_05() {
     let input = "Burning 'em, if you ain't quick and nimble
 I go crazy when I hear a cymbal";
-    let key = "ICE";
-    let ct = cryptopals::xor::repeating_key_xor(input.as_bytes(), key.as_bytes());
+    let key = xor::Key::new(b"ICE");
+    let ct = cryptopals::xor::repeating_key_xor(input.as_bytes(), &key);
     let hex = cryptopals::bytes_to_hex(&ct);
     assert_eq!(
         &hex,
