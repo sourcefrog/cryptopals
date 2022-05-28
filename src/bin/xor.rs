@@ -14,12 +14,7 @@ pub fn main() {
         std::process::exit(1);
     }
     let key_filename = argv.nth(1).unwrap();
-    let mut key_bytes = Vec::new();
-    File::open(key_filename)
-        .unwrap()
-        .read_to_end(&mut key_bytes)
-        .unwrap();
-    let key = xor::Key::new(&key_bytes);
+    let key = xor::Key::read_from(&mut File::open(key_filename).unwrap()).unwrap();
     let mut input = Vec::new();
     let len = stdin().read_to_end(&mut input).unwrap();
     assert_eq!(len, input.len());

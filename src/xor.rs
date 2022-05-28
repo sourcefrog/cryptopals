@@ -1,5 +1,7 @@
 //! Simple xor encryption.
 
+use std::io::{self, Read};
+
 use crate::hamming::hamming_distance;
 use crate::strs::bytes_to_lossy_ascii;
 use crate::{bytes_to_hex, score_english};
@@ -22,6 +24,12 @@ impl Key {
 
     pub fn as_slice(&self) -> &[u8] {
         &self.0
+    }
+
+    pub fn read_from<R: Read>(read: &mut R) -> io::Result<Key> {
+        let mut key_bytes = Vec::new();
+        read.read_to_end(&mut key_bytes)?;
+        Ok(Key(key_bytes))
     }
 }
 
