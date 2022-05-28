@@ -11,7 +11,7 @@ fn challenge_10() {
     let input = base64_file_to_bytes("input/10.txt");
     let iv = [0u8; 16];
     let key = aes::Key::from_slice(b"YELLOW SUBMARINE");
-    let plain = decrypt_aes_cbc(&input, &iv, &key);
+    let plain = decrypt_aes_cbc(&input, &iv, &key).unwrap();
     println!("{}", bytes_to_lossy_ascii(&plain));
     let plain = String::from_utf8(plain).expect("plaintext is not ascii");
     assert!(plain.contains("Lay down and boogie and play that funky music till you die."));
