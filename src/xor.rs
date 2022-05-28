@@ -119,7 +119,7 @@ pub fn break_repeating_xor(ct: &[u8]) -> (Key, String) {
         .flat_map(|keysize| guess_n_byte_key(ct, keysize))
         .next()
         .expect("no key found");
-    let clear = repeating_key_xor(&ct, &key);
+    let clear = repeating_key_xor(ct, &key);
     assert!(clear.is_ascii());
     (key, String::from_utf8_lossy(&clear).to_string())
 }
