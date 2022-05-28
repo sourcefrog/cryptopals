@@ -7,7 +7,7 @@ use std::fs;
 use cryptopals::xor::{self, repeating_key_xor};
 
 #[test]
-fn solution_04() {
+fn challenge_04() {
     let (_score, key_byte, clear) = fs::read_to_string("input/4.txt")
         .expect("open input 4")
         .lines()

@@ -34,6 +34,24 @@ pub fn score_english(cand: &[u8]) -> u32 {
     p as u32
 }
 
+/// Detect AES ECB causing repeated blocks.
+pub fn detect_aes_ecb(ct: &[u8]) -> bool {
+    const BLK: usize = 16;
+    let n = ct.len() / BLK;
+    assert!(n > 1);
+    fn chunk(ct: &[u8], i: usize) -> &[u8] {
+        &ct[(i * BLK)..((i + 1) * BLK)]
+    }
+    for i in 0..(n - 1) {
+        for j in (i + 1)..n {
+            if chunk(ct, i) == chunk(ct, j) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod test {
     use crate::score_english;

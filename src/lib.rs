@@ -1,7 +1,7 @@
 //! My cryptopals solutions.
 
 pub mod base64;
-mod detect;
+pub mod detect;
 pub mod freqs;
 pub mod hamming;
 mod hex;

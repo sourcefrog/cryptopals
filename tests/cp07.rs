@@ -11,7 +11,7 @@ use aes::Aes128;
 use cryptopals::base64_to_bytes;
 
 #[test]
-fn solution_07() {
+fn challenge_07() {
     let ct = base64_to_bytes(&read_to_string("input/7.txt").unwrap());
     let key: GenericArray<u8, U16> = GenericArray::clone_from_slice(b"YELLOW SUBMARINE");
 

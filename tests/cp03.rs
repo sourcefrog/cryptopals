@@ -1,7 +1,7 @@
 use cryptopals::xor::{self, repeating_key_xor};
 
 #[test]
-fn solution_03() {
+fn challenge_03() {
     let input = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let ct = cryptopals::hex_to_bytes(input);
     let (_score, key_byte) = cryptopals::xor::guess_single_byte_key(&ct).expect("no key found");

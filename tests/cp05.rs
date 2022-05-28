@@ -5,7 +5,7 @@
 use cryptopals::xor;
 
 #[test]
-fn solution_05() {
+fn challenge_05() {
     let input = "Burning 'em, if you ain't quick and nimble
 I go crazy when I hear a cymbal";
     let key = xor::Key::new(b"ICE");
