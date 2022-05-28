@@ -43,8 +43,7 @@ pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &Key) -> Option<Vec<u8>> {
 }
 
 pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
-    let mut plain = plain.to_owned();
-    pkcs7::pad(&mut plain, BLK);
+    let plain = pkcs7::pad(&plain, BLK);
     let cipher = Aes128::new(&key.0);
     let mut prev_ct: GenericArray<u8, U16> = GenericArray::clone_from_slice(iv);
     let mut ct: Vec<u8> = Vec::with_capacity(plain.len());
@@ -61,7 +60,7 @@ pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     ct
 }
 
-pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Vec<u8> {
+pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Option<Vec<u8>> {
     let cipher = Aes128::new(&key.0);
     let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
     for block in ct.chunks(BLK) {
@@ -69,7 +68,19 @@ pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Vec<u8> {
         cipher.decrypt_block(&mut b);
         plain.extend(&b);
     }
-    plain
+    pkcs7::unpad(&plain).map(|s| s.to_owned())
+}
+
+pub fn encrypt_aes_ecb(plain: &[u8], key: &Key) -> Vec<u8> {
+    let plain = pkcs7::pad(&plain, BLK);
+    let cipher = Aes128::new(&key.0);
+    let mut ct: Vec<u8> = Vec::with_capacity(plain.len());
+    for block in plain.chunks(BLK) {
+        let mut b = GenericArray::clone_from_slice(block);
+        cipher.encrypt_block(&mut b);
+        ct.extend(&b);
+    }
+    ct
 }
 
 #[cfg(test)]
@@ -80,11 +91,19 @@ mod test {
 
     proptest! {
         #[test]
-        fn roundtrip(plain: Vec<u8>) {
+        fn roundtrip_aes_cbc(plain: Vec<u8>) {
             let key = Key::random();
             let iv = [0u8; 16];
             let ct = encrypt_aes_cbc(&plain, &iv, &key);
             let ret = decrypt_aes_cbc(&ct, &iv, &key).expect("decryption failed");
+            assert_eq!(plain, ret);
+        }
+
+        #[test]
+        fn roundtrip_aes_ecb(plain: Vec<u8>) {
+            let key = Key::random();
+            let ct = encrypt_aes_ecb(&plain, &key);
+            let ret = decrypt_aes_ecb(&ct, &key).unwrap();
             assert_eq!(plain, ret);
         }
     }

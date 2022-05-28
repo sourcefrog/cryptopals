@@ -5,16 +5,18 @@ use std::iter;
 /// Add padding in place in a buffer.
 ///
 /// The result will be an even multiple of sz bytes long.
-pub fn pad(b: &mut Vec<u8>, sz: usize) {
+#[must_use]
+pub fn pad(b: &[u8], sz: usize) -> Vec<u8> {
     assert!(sz < 256);
     assert!(sz > 0);
     let mut m = sz - (b.len() % sz);
     if m == 0 {
         m = sz
     }
-    b.reserve(m);
-    b.extend(iter::repeat(m as u8).take(m));
-    debug_assert_eq!(b.len() % sz, 0)
+    let mut padded = Vec::with_capacity(b.len() + m);
+    padded.extend_from_slice(b);
+    padded.extend(iter::repeat(m as u8).take(m));
+    padded
 }
 
 /// Validate PKCS#7 padding and return a slice with it removed, if it's valid.
@@ -47,8 +49,7 @@ mod test {
     #[test]
     fn sixteen_zeros() {
         let plain = [0u8; 16];
-        let mut padded: Vec<u8> = plain.into();
-        pad(&mut padded, 16);
+        let padded = pad(&plain, 16);
         assert_eq!(padded.len(), 32);
         assert_eq!(padded[..16], plain);
         assert_eq!(&padded[16..], &[16; 16]);
@@ -74,8 +75,7 @@ mod test {
     proptest! {
         #[test]
         fn pad_roundtrip(b: Vec<u8>, blk in 1..20usize) {
-            let mut padded = b.clone();
-            pad(&mut padded, blk);
+            let padded = pad(&b, blk);
             assert_eq!(padded.len() % blk, 0);
             assert!(padded.len() > b.len());
         }
