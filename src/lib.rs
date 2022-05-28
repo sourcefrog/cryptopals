@@ -3,6 +3,7 @@
 mod base64;
 mod detect;
 mod hex;
+pub mod xor;
 
 pub use base64::to_base64;
 pub use detect::{guess_single_byte_key, score_english};
