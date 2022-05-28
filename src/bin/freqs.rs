@@ -9,6 +9,6 @@ use cryptopals::freqs::FrequencyTable;
 pub fn main() {
     let mut input = Vec::new();
     stdin().read_to_end(&mut input).unwrap();
-    let freqs = FrequencyTable::from_text(&input);
+    let freqs = FrequencyTable::from_bytes(&input);
     println!("{freqs}");
 }

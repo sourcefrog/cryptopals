@@ -11,7 +11,7 @@ fn solution_04() {
         .lines()
         .map(|line| cryptopals::hex_to_bytes(line))
         .flat_map(|line| cryptopals::guess_single_byte_key(&line))
-        // .inspect(|(score, key, output)| println!("{:4}  {:#2x} {}", score, key, output))
+        .inspect(|(score, key, output)| println!("{:4}  {:#2x} {:?}", score, key, output))
         .max_by_key(|&(score, _, _)| score)
         .expect("no solution found");
     println!("{:4}  {:#2x} {:?}", score, key, output);
