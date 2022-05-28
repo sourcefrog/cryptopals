@@ -1,5 +1,6 @@
 //! My cryptopals solutions.
 
+pub mod aes;
 pub mod base64;
 pub mod detect;
 pub mod freqs;

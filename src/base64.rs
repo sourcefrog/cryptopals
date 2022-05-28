@@ -4,6 +4,9 @@
 
 // Obviously there are libraries but let's do it by hand.
 
+use std::fs::read_to_string;
+use std::path::Path;
+
 const PAD: char = '=';
 
 pub fn bytes_to_base64(s: &[u8]) -> String {
@@ -72,6 +75,10 @@ pub fn base64_to_bytes(base64: &str) -> Vec<u8> {
         debug_assert!(a <= 0xffffff);
     }
     r
+}
+
+pub fn base64_file_to_bytes(path: &str) -> Vec<u8> {
+    base64_to_bytes(&read_to_string(Path::new(path)).unwrap())
 }
 
 fn to_base64_char(b: u8) -> char {
