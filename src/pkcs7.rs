@@ -45,6 +45,19 @@ mod test {
     use super::*;
 
     #[test]
+    fn sixteen_zeros() {
+        let plain = [0u8; 16];
+        let mut padded: Vec<u8> = plain.into();
+        pad(&mut padded, 16);
+        assert_eq!(padded.len(), 32);
+        assert_eq!(padded[..16], plain);
+        assert_eq!(&padded[16..], &[16; 16]);
+
+        let unpadded = unpad(&padded).unwrap();
+        assert_eq!(unpadded, plain);
+    }
+
+    #[test]
     fn bad_padding() {
         assert_eq!(unpad(b""), None);
         assert_eq!(unpad(&[3u8]), None);
