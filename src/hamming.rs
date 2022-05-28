@@ -11,6 +11,18 @@ pub fn hamming_distance(a: &[u8], b: &[u8]) -> usize {
         .sum()
 }
 
+/// Return the mean Hamming distance between consecutive pairs of blocks in a buffer.
+pub fn mean_hamming_distance(a: &[u8], sz: usize) -> f64 {
+    assert!(sz > 0);
+    let distances = a
+        .chunks_exact(sz)
+        .zip(a.chunks_exact(sz).skip(1))
+        .map(|(a, b)| hamming_distance(a, b))
+        .collect::<Vec<usize>>();
+    let n = distances.len();
+    (distances.iter().sum::<usize>() as f64) / (sz as f64) / (n as f64)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

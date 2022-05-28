@@ -5,7 +5,7 @@
 use std::fs::read_to_string;
 
 use cryptopals::base64_to_bytes;
-use cryptopals::xor::break_repeating_xor;
+use cryptopals::xor::{break_repeating_xor, guess_key_size};
 
 #[test]
 fn challenge_06() {
@@ -15,4 +15,7 @@ fn challenge_06() {
     println!("{}", cleartext);
     assert_eq!(key.as_slice(), b"Terminator X: Bring the noise");
     assert!(cleartext.starts_with("I'm back and I'm ringin' the bell"));
+
+    // We can get the key size on the first attempt
+    assert_eq!(guess_key_size(&ct)[0], 29);
 }

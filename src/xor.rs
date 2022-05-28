@@ -2,7 +2,7 @@
 
 use std::io::{self, Read};
 
-use crate::hamming::hamming_distance;
+use crate::hamming::mean_hamming_distance;
 use crate::strs::bytes_to_lossy_ascii;
 use crate::{bytes_to_hex, score_english};
 
@@ -50,15 +50,13 @@ pub fn repeating_key_xor(text: &[u8], key: &Key) -> Vec<u8> {
 ///
 /// Returns a vec of guesses, sorted from most likely.
 pub fn guess_key_size(ct: &[u8]) -> Vec<usize> {
-    // TODO: Maybe look across all blocks in the ct, not just the first two?
     let mut r: Vec<(f64, usize)> = (2..=40)
-        .map(|ks| {
-            let d = (hamming_distance(&ct[0..ks], &ct[ks..(2 * ks)]) as f64) / (ks as f64);
-            (d, ks)
-        })
+        .map(|ks| (mean_hamming_distance(ct, ks), ks))
         .collect();
     r.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-    // dbg!(&r);
+    // for (distance, sz) in &r {
+    //     println!("{sz:7} {distance:.6}");
+    // }
     r.iter().map(|(_d, ks)| *ks).collect()
 }
 
@@ -115,17 +113,12 @@ pub fn guess_n_byte_key(ct: &[u8], keysize: usize) -> Option<Key> {
 ///
 /// Returns the guessed key, and the (hopefully) cleartext.
 pub fn break_repeating_xor(ct: &[u8]) -> (Key, String) {
-    let mut keys: Vec<Key> = guess_key_size(ct)
+    let key: Key = guess_key_size(ct)
         .into_iter()
-        .take(100)
         .inspect(|keysize| println!("try key size {keysize}"))
         .flat_map(|keysize| guess_n_byte_key(ct, keysize))
-        .collect();
-    assert!(!keys.is_empty(), "no keys found");
-    if keys.len() != 1 {
-        todo!("find which key is the best fit")
-    }
-    let key = keys.pop().unwrap();
+        .next()
+        .expect("no key found");
     let clear = repeating_key_xor(&ct, &key);
     assert!(clear.is_ascii());
     (key, String::from_utf8_lossy(&clear).to_string())
