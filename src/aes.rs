@@ -61,6 +61,17 @@ pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     ct
 }
 
+pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Vec<u8> {
+    let cipher = Aes128::new(&key.0);
+    let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
+    for block in ct.chunks(BLK) {
+        let mut b = GenericArray::clone_from_slice(block);
+        cipher.decrypt_block(&mut b);
+        plain.extend(&b);
+    }
+    plain
+}
+
 #[cfg(test)]
 mod test {
     use proptest::prelude::*;
