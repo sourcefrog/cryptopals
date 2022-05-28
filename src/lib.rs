@@ -5,6 +5,7 @@ pub mod detect;
 pub mod freqs;
 pub mod hamming;
 mod hex;
+pub mod pkcs7;
 pub mod strs;
 pub mod xor;
 
