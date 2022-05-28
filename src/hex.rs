@@ -27,7 +27,7 @@ pub fn bytes_to_hex(bytes: &[u8]) -> String {
     use std::fmt::Write;
     let mut hex = String::with_capacity(bytes.len() * 2);
     for b in bytes {
-        write!(hex, "{:2x}", b).unwrap();
+        write!(hex, "{:02x}", b).unwrap();
     }
     hex
 }
