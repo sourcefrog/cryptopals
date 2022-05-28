@@ -140,4 +140,28 @@ mod test {
         let no_ws: String = input.chars().filter(|c| !c.is_ascii_whitespace()).collect();
         assert_eq!(bytes_to_base64(&bytes), no_ws);
     }
+
+    #[test]
+    fn all_byte_values() {
+        let bytes: Vec<u8> = (0..=255).collect();
+        assert_eq!(base64_to_bytes(&bytes_to_base64(&bytes)), bytes);
+    }
+
+    #[test]
+    fn another_example() {
+        let text= "For each KEYSIZE, take the first KEYSIZE worth of bytes, and the second KEYSIZE worth of bytes, and find the edit distance between them. Normalize this result by dividing by KEYSIZE.
+The KEYSIZE with the smallest normalized edit distance is probably the key. You could proceed perhaps with the smallest 2-3 KEYSIZE values. Or take 4 KEYSIZE blocks instead of 2 and average the distances.
+Now that you probably know the KEYSIZE: break the ciphertext into blocks of KEYSIZE length.
+";
+        let base64 = "Rm9yIGVhY2ggS0VZU0laRSwgdGFrZSB0aGUgZmlyc3QgS0VZU0laRSB3b3J0aCBvZiBieXRlcywg
+YW5kIHRoZSBzZWNvbmQgS0VZU0laRSB3b3J0aCBvZiBieXRlcywgYW5kIGZpbmQgdGhlIGVkaXQg
+ZGlzdGFuY2UgYmV0d2VlbiB0aGVtLiBOb3JtYWxpemUgdGhpcyByZXN1bHQgYnkgZGl2aWRpbmcg
+YnkgS0VZU0laRS4KVGhlIEtFWVNJWkUgd2l0aCB0aGUgc21hbGxlc3Qgbm9ybWFsaXplZCBlZGl0
+IGRpc3RhbmNlIGlzIHByb2JhYmx5IHRoZSBrZXkuIFlvdSBjb3VsZCBwcm9jZWVkIHBlcmhhcHMg
+d2l0aCB0aGUgc21hbGxlc3QgMi0zIEtFWVNJWkUgdmFsdWVzLiBPciB0YWtlIDQgS0VZU0laRSBi
+bG9ja3MgaW5zdGVhZCBvZiAyIGFuZCBhdmVyYWdlIHRoZSBkaXN0YW5jZXMuCk5vdyB0aGF0IHlv
+dSBwcm9iYWJseSBrbm93IHRoZSBLRVlTSVpFOiBicmVhayB0aGUgY2lwaGVydGV4dCBpbnRvIGJs
+b2NrcyBvZiBLRVlTSVpFIGxlbmd0aC4K";
+        assert_eq!(base64_to_bytes(base64), text.as_bytes());
+    }
 }
