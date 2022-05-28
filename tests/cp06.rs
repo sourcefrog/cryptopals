@@ -2,9 +2,9 @@
 //!
 //! <https://cryptopals.com/sets/1/challenges/6>
 
-use std::fs::read_to_string;
+// use std::fs::read_to_string;
 
-use cryptopals::base64_to_bytes;
+// use cryptopals::base64_to_bytes;
 // use cryptopals::xor::break_repeating_xor;
 
 // #[test]
