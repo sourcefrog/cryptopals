@@ -10,6 +10,49 @@ use cryptopals::pkcs7;
 
 type Profile = BTreeMap<String, String>;
 
+#[test]
+fn get_admin() {
+    // We can replace any block of the cyphertext if we know another cyphertext
+    // block with the desired plaintext content. And, we can generate arbitrary
+    // cyphertext from supplied plaintext, but with the constraint that we
+    // can't get metacharacters into it. However we can probably work around that
+    // by making use of block alignment: get the '=' just before the start
+    // of a new block?
+    //
+    // So we want to concatenate cyphertexts for
+    // "email=whoever&uid=10&role=" ++ "admin......"
+    //
+    // where both are even 16-byte blocks, and the "admin" bit is padded out
+    // with eleven bytes of 11.
+    //
+    // There are 19 fixed bytes in the first part, so the email needs to be
+    // 13 bytes to get an even 32.
+    //
+    // To get the "admin..." block we need to use an email that will align it to
+    // the start of the second block. There's six bytes in "email=" so then
+    // we need 10 more before "admin".
+
+    let unknown_key = Key::random();
+    let email_a = "0123456789abc";
+    debug_assert_eq!(email_a.len(), 13);
+    let ct_a = encrypted_profile(email_a, &unknown_key);
+    assert_eq!(ct_a.len(), 48); // 32 desired bytes + 16 role & padding
+
+    let admin_padded = "admin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
+    debug_assert_eq!(admin_padded.len(), 16);
+    let mut email_b = "0123456789".to_string();
+    email_b.push_str(admin_padded);
+    let ct_b = encrypted_profile(&email_b, &unknown_key);
+    debug_assert_eq!(ct_b.len(), 64);
+
+    let mut fused_ct: Vec<u8> = ct_a[..32].to_vec(); // "email=0123456789acb&uid=10&role="
+    fused_ct.extend_from_slice(&ct_b[16..32]); // admin....
+    let profile = decrypt_profile(&fused_ct, &unknown_key).unwrap();
+    println!("{:?}", profile);
+
+    assert_eq!(profile["role"], "admin"); // woot!
+}
+
 pub fn parse_kv(s: &str) -> Option<BTreeMap<String, String>> {
     let mut map = BTreeMap::new();
     for kvstr in s.split("&") {
@@ -31,11 +74,7 @@ pub fn serialize_kv(kv: &BTreeMap<String, String>) -> String {
 }
 
 pub fn profile_for(email: &str) -> String {
-    let mut kv = BTreeMap::new();
-    kv.insert("email".into(), email.to_string());
-    kv.insert("uid".into(), "10".into());
-    kv.insert("role".into(), "user".into());
-    serialize_kv(&kv)
+    format!("email={}&uid=10&role=user", clean(email))
 }
 
 pub fn encrypted_profile(email: &str, unknown_key: &Key) -> Vec<u8> {
@@ -72,7 +111,7 @@ fn strings_are_cleaned() {
 fn profile_example() {
     assert_eq!(
         profile_for("foo@bar.com"),
-        "email=foo@bar.com&role=user&uid=10"
+        "email=foo@bar.com&uid=10&role=user"
     );
 }
 
