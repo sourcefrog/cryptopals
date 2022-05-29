@@ -25,6 +25,13 @@ impl Key {
     }
 }
 
+pub fn random_iv() -> [u8; 16] {
+    let mut key = [0u8; BLK];
+    thread_rng().fill(&mut key);
+    key
+}
+
+#[must_use]
 pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &Key) -> Option<Vec<u8>> {
     let cipher = Aes128::new(&key.0);
     let mut last_block: &[u8] = iv;
@@ -42,6 +49,7 @@ pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &Key) -> Option<Vec<u8>> {
     pkcs7::unpad(&plain).map(|s| s.to_owned())
 }
 
+#[must_use]
 pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     let plain = pkcs7::pad(&plain, BLK);
     let cipher = Aes128::new(&key.0);
@@ -60,6 +68,7 @@ pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     ct
 }
 
+#[must_use]
 pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Option<Vec<u8>> {
     let cipher = Aes128::new(&key.0);
     let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
@@ -71,6 +80,7 @@ pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Option<Vec<u8>> {
     pkcs7::unpad(&plain).map(|s| s.to_owned())
 }
 
+#[must_use]
 pub fn encrypt_aes_ecb(plain: &[u8], key: &Key) -> Vec<u8> {
     let plain = pkcs7::pad(&plain, BLK);
     let cipher = Aes128::new(&key.0);

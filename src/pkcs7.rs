@@ -20,6 +20,7 @@ pub fn pad(b: &[u8], sz: usize) -> Vec<u8> {
 }
 
 /// Validate PKCS#7 padding and return a slice with it removed, if it's valid.
+#[must_use]
 pub fn unpad(b: &[u8]) -> Option<&[u8]> {
     let l = b.len();
     if let Some(&pad) = b.last() {
@@ -62,6 +63,7 @@ mod test {
     fn bad_padding() {
         assert_eq!(unpad(b""), None);
         assert_eq!(unpad(&[3u8]), None);
+        assert_eq!(unpad(&[0, 1, 2, 3u8]), None);
     }
 
     #[test]
