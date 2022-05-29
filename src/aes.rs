@@ -69,7 +69,8 @@ pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
 }
 
 #[must_use]
-pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Option<Vec<u8>> {
+pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Vec<u8> {
+    assert!(ct.len() % BLK == 0, "plaintext is not block padded");
     let cipher = Aes128::new(&key.0);
     let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
     for block in ct.chunks(BLK) {
@@ -77,12 +78,16 @@ pub fn decrypt_aes_ecb(ct: &[u8], key: &Key) -> Option<Vec<u8>> {
         cipher.decrypt_block(&mut b);
         plain.extend(&b);
     }
-    pkcs7::unpad(&plain).map(|s| s.to_owned())
+    plain
 }
 
 #[must_use]
 pub fn encrypt_aes_ecb(plain: &[u8], key: &Key) -> Vec<u8> {
-    let plain = pkcs7::pad(&plain, BLK);
+    assert!(
+        plain.len() % BLK == 0,
+        "plaintext is not block padded: {}",
+        plain.len()
+    );
     let cipher = Aes128::new(&key.0);
     let mut ct: Vec<u8> = Vec::with_capacity(plain.len());
     for block in plain.chunks(BLK) {
@@ -112,9 +117,10 @@ mod test {
         #[test]
         fn roundtrip_aes_ecb(plain: Vec<u8>) {
             let key = Key::random();
-            let ct = encrypt_aes_ecb(&plain, &key);
-            let ret = decrypt_aes_ecb(&ct, &key).unwrap();
-            assert_eq!(plain, ret);
+            let padded = pkcs7::pad(&plain, BLK);
+            let ct = encrypt_aes_ecb(&padded, &key);
+            let ret_padded = decrypt_aes_ecb(&ct, &key);
+            assert_eq!(pkcs7::unpad(&ret_padded).expect("unpad"), plain);
         }
     }
 }
