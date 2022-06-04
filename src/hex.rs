@@ -32,6 +32,28 @@ pub fn bytes_to_hex(bytes: &[u8]) -> String {
     hex
 }
 
+#[allow(unused)]
+pub fn print_blocks(b: &[u8]) {
+    let mut col = false;
+    let mut first = true;
+    for blk in b.chunks(16) {
+        if !first {
+            if col {
+                print!(" | ");
+            } else {
+                println!();
+            }
+        } else {
+            first = false;
+        }
+        for b in blk {
+            print!("{b:02x}");
+        }
+        col = !col;
+    }
+    println!();
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

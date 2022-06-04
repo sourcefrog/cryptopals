@@ -65,7 +65,8 @@ use cryptopals::random::random_bytes;
 use cryptopals::strs::bytes_to_lossy_ascii;
 use cryptopals::{base64_to_bytes, bytes_to_hex};
 
-const UNKNOWN_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+const UNKNOWN_STRING: &str = "
+Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
 aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
 dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
 YnkK";
@@ -103,40 +104,16 @@ fn find_repeated_block(b: &[u8], n: usize) -> Option<usize> {
     None
 }
 
-fn print_blocks(b: &[u8]) {
-    let mut col = false;
-    let mut first = true;
-    for blk in b.chunks(BLK) {
-        if !first {
-            if col {
-                print!(" | ");
-            } else {
-                println!();
-            }
-        } else {
-            first = false;
-        }
-        for b in blk {
-            print!("{b:02x}");
-        }
-        col = !col;
-    }
-    println!();
-}
-
 fn check_alphabet(al: &[&[u8]]) {
     assert_eq!(al.len(), 256);
-    // for i in 0..=255 {
-    //     println!("{i:#02x} : {}", bytes_to_hex(al[i]));
-    // }
     for i in 0..255 {
         for j in (i + 1)..=255 {
-            assert_ne!(
-                al[i],
-                al[j],
-                "al[{i:#x}] == al[{j:#x}]: {}",
-                bytes_to_hex(al[i])
-            );
+            if al[i] == al[j] {
+                for i in 0..=255 {
+                    println!("{i:#02x} : {}", bytes_to_hex(al[i]));
+                }
+                panic!("al[{i:#x}] == al[{j:#x}]: {}", bytes_to_hex(al[i]));
+            }
         }
     }
 }
@@ -169,7 +146,7 @@ fn ecb_attack(unknown_key: &Key) -> Vec<u8> {
         .take(n_markers)
         .flatten()
         .collect();
-    for _attempt in 0..500 {
+    for attempt in 0..50000 {
         // Use a different offset every time; it doesn't matter which one but we
         // just want to try different values to hopefully eventually align,
         // without making assumptions about the prefix to the controlled text.
@@ -177,16 +154,13 @@ fn ecb_attack(unknown_key: &Key) -> Vec<u8> {
         // Build a probe of offset || markers || alphabet || capture.
         let mut probe = vec![0; offset];
         probe.extend_from_slice(&markers);
-        println!("prefix:  {}", bytes_to_hex(&prefix));
+        // println!("prefix:  {}", bytes_to_hex(&prefix));
         for b in 0..=255u8 {
             probe.extend_from_slice(&prefix);
             probe.push(b);
         }
-        let capture_len = BLK - ((recovered.len() + 1) % BLK);
-        println!("capture_len={capture_len}");
-        for _ in 0..capture_len {
-            probe.push(0);
-        }
+        let align_target = BLK - ((recovered.len() + 1) % BLK);
+        probe.resize(probe.len() + align_target, 0);
         let ct = encryption_oracle(&probe, unknown_key);
         debug_assert_eq!(ct.len() % BLK, 0);
         let ct_blocks: Vec<&[u8]> = ct.chunks(BLK).collect();
@@ -198,31 +172,37 @@ fn ecb_attack(unknown_key: &Key) -> Vec<u8> {
         );
         // Look for the run of equal marker blocks
         if let Some(marker_offset) = find_repeated_block(&ct, n_markers) {
-            println!("found markers at block {marker_offset}");
+            // println!("found markers at block {marker_offset}");
             // print_blocks(&ct);
             // Now the encrypted alphabet blocks should follow the markers.
             let alpha_start = marker_offset + n_markers;
             assert!(alpha_start + 256 < ct_blocks.len());
             let alphabet: &[&[u8]] = &ct_blocks[alpha_start..(alpha_start + 256)];
             check_alphabet(alphabet);
-            // Now hopefully the next block matches one of the alphabet blocks...
+            // Now hopefully the next block matches one of the alphabet blocks. We're always
+            // trying to match an aligned target block, but for later parts of the text we
+            // need to fetch later blocks.
             let target_start = alpha_start + 256;
-            if let Some(target_byte) = alphabet_lookup(alphabet, ct_blocks[target_start]) {
-                println!("recovered byte {target_byte:#02x}"); // Hooray!
-                recovered.push(target_byte);
-                if recovered.len() == BLK {
-                    return recovered; // TODO: get the second block!
+            let target_block = target_start + (recovered.len() + 1) / BLK;
+            if let Some(target_byte) = alphabet_lookup(alphabet, ct_blocks[target_block]) {
+                println!(
+                    "recovered byte {target_byte:#02x}: {}",
+                    bytes_to_lossy_ascii(&recovered)
+                ); // Hooray!
+                if target_byte == 0x01 {
+                    // Somewhat hacky: if it's 0x01 that's probably the final padding. This wouldn't work
+                    // if the target was binary and could contain 0x01; we'd need a better way to
+                    // know we're done.
+                    println!("solved after {attempt} attempts");
+                    return recovered;
                 }
+                recovered.push(target_byte);
                 // Move prefix left and append this byte.
                 prefix.copy_within(1..15, 0);
                 prefix[14] = target_byte;
             } else {
-                println!("no match against alphabet; maybe this is the end?");
-                return recovered;
+                panic!("no match against alphabet");
             }
-        } else {
-            // println!("no markers found");
-            continue;
         }
     }
     recovered
