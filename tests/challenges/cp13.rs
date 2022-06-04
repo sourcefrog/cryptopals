@@ -55,8 +55,8 @@ fn get_admin() {
 
 pub fn parse_kv(s: &str) -> Option<BTreeMap<String, String>> {
     let mut map = BTreeMap::new();
-    for kvstr in s.split("&") {
-        let (kstr, vstr) = kvstr.split_once("=")?;
+    for kvstr in s.split('&') {
+        let (kstr, vstr) = kvstr.split_once('=')?;
         map.insert(kstr.into(), vstr.into());
     }
     Some(map)
@@ -80,14 +80,14 @@ pub fn profile_for(email: &str) -> String {
 pub fn encrypted_profile(email: &str, unknown_key: &Key) -> Vec<u8> {
     let plain = profile_for(email);
     let padded = pkcs7::pad(plain.as_bytes(), 16);
-    encrypt_aes_ecb(&padded, &unknown_key)
+    encrypt_aes_ecb(&padded, unknown_key)
 }
 
 pub fn decrypt_profile(ct: &[u8], unknown_key: &Key) -> Option<Profile> {
     let padded = decrypt_aes_ecb(ct, unknown_key);
     let plain = pkcs7::unpad(&padded)?;
     let plain_str = from_utf8(plain).ok()?;
-    parse_kv(&plain_str)
+    parse_kv(plain_str)
 }
 
 #[test]

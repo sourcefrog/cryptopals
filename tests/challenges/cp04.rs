@@ -11,7 +11,7 @@ fn challenge_04() {
     let (_score, key_byte, clear) = fs::read_to_string("input/4.txt")
         .expect("open input 4")
         .lines()
-        .map(|line| cryptopals::hex_to_bytes(line))
+        .map(cryptopals::hex_to_bytes)
         .flat_map(|line| {
             if let Some((score, key_byte)) = xor::guess_single_byte_key(&line) {
                 Some((

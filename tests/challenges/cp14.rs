@@ -106,6 +106,7 @@ fn find_repeated_block(b: &[u8], n: usize) -> Option<usize> {
 
 fn check_alphabet(al: &[&[u8]]) {
     assert_eq!(al.len(), 256);
+    #[allow(clippy::needless_range_loop)] // it's simpler
     for i in 0..255 {
         for j in (i + 1)..=255 {
             if al[i] == al[j] {

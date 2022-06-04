@@ -115,7 +115,7 @@ mod test {
     use super::*;
 
     fn roundtrip(a: &[u8]) {
-        let base64 = bytes_to_base64(&a);
+        let base64 = bytes_to_base64(a);
         dbg!(&base64);
         assert_eq!(base64_to_bytes(&base64), a);
     }

@@ -28,7 +28,7 @@ fn discover_block_size(unknown_key: &Key) -> usize {
     let mut last_output_size = None;
     let my_text = [b'A'; 256];
     for i in 1..256 {
-        let ct = encryption_oracle(&my_text[..i], &unknown_key);
+        let ct = encryption_oracle(&my_text[..i], unknown_key);
         if let Some(last) = last_output_size {
             if ct.len() != last {
                 return ct.len() - last;

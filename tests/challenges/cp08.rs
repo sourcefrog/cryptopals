@@ -13,11 +13,10 @@ fn challenge_08() {
     let input = read_to_string("input/8.txt").unwrap();
     let gotcha = input
         .lines()
-        .filter(|line| {
+        .find(|line| {
             // If there's a repeated 16-byte block, it's a good sign of ECB encryption.
-            detect_aes_ecb(&hex_to_bytes(&line))
+            detect_aes_ecb(&hex_to_bytes(line))
         })
-        .next()
         .expect("no AES-ECB line found");
     println!("AES-ECB in {gotcha}");
     for c in gotcha.as_bytes().chunks(32) {
