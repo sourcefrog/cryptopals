@@ -7,6 +7,7 @@ pub mod freqs;
 pub mod hamming;
 mod hex;
 pub mod pkcs7;
+pub mod random;
 pub mod strs;
 pub mod xor;
 
