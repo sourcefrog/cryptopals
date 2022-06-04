@@ -185,10 +185,10 @@ fn ecb_attack(unknown_key: &Key) -> Vec<u8> {
             let target_start = alpha_start + 256;
             let target_block = target_start + (recovered.len() + 1) / BLK;
             if let Some(target_byte) = alphabet_lookup(alphabet, ct_blocks[target_block]) {
-                println!(
-                    "recovered byte {target_byte:#02x}: {}",
-                    bytes_to_lossy_ascii(&recovered)
-                ); // Hooray!
+                // println!(
+                //     "recovered byte {target_byte:#02x}: {}",
+                //     bytes_to_lossy_ascii(&recovered)
+                // ); // Hooray!
                 if target_byte == 0x01 {
                     // Somewhat hacky: if it's 0x01 that's probably the final padding. This wouldn't work
                     // if the target was binary and could contain 0x01; we'd need a better way to
@@ -201,11 +201,12 @@ fn ecb_attack(unknown_key: &Key) -> Vec<u8> {
                 prefix.copy_within(1..15, 0);
                 prefix[14] = target_byte;
             } else {
-                panic!("no match against alphabet");
+                println!("no match against alphabet");
+                // let's just try again at a different alignment?
             }
         }
     }
-    recovered
+    unreachable!("no solution found");
 }
 
 #[test]
