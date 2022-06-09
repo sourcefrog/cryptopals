@@ -3,7 +3,7 @@
 //! <https://cryptopals.com/sets/2/challenges/16>
 
 use cryptopals::aes::{self, decrypt_aes_cbc, encrypt_aes_cbc};
-use cryptopals::pkcs7::pad;
+use cryptopals::pkcs7::{pad, unpad};
 use cryptopals::strs::bytes_to_lossy_ascii;
 
 /// Encrypt a string including quoted user-supplied data with a prefix and
@@ -21,7 +21,7 @@ fn encrypt_cookie(userdata: &str, secret_key: &aes::Key, iv: &aes::Iv) -> Vec<u8
 /// Take an encrypted cookie and say whether the contents indicate that the user
 /// is admin.
 fn is_admin(cookie_ct: &[u8], secret_key: &aes::Key, iv: &aes::Iv) -> bool {
-    if let Some(plain) = decrypt_aes_cbc(&cookie_ct, iv, secret_key) {
+    if let Some(plain) = unpad(&decrypt_aes_cbc(&cookie_ct, iv, secret_key)) {
         println!("{}", bytes_to_lossy_ascii(&plain));
         let plain_str = String::from_utf8_lossy(&plain);
         plain_str.contains(";admin=true;")
