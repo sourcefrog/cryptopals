@@ -21,9 +21,9 @@ fn encrypt_cookie(userdata: &str, secret_key: &aes::Key, iv: &[u8]) -> Vec<u8> {
 /// Take an encrypted cookie and say whether the contents indicate that the user
 /// is admin.
 fn is_admin(cookie_ct: &[u8], secret_key: &aes::Key, iv: &[u8]) -> bool {
-    if let Some(plain) = unpad(&decrypt_aes_cbc(&cookie_ct, iv, secret_key)) {
-        println!("{}", bytes_to_lossy_ascii(&plain));
-        let plain_str = String::from_utf8_lossy(&plain);
+    if let Some(plain) = unpad(&decrypt_aes_cbc(cookie_ct, iv, secret_key)) {
+        println!("{}", bytes_to_lossy_ascii(plain));
+        let plain_str = String::from_utf8_lossy(plain);
         plain_str.contains(";admin=true;")
     } else {
         println!("decryption failed");
@@ -53,7 +53,7 @@ fn challenge_16() {
     let key = aes::Key::random();
     let iv = aes::random_iv();
     let userdata = "0123456789abcdef,,,,XadminYtrueX";
-    let mut ct = encrypt_cookie(&userdata, &key, &iv);
+    let mut ct = encrypt_cookie(userdata, &key, &iv);
     // Within the target block, we want to flip X to ';' at offset 4 and offset 15.
     // And the target starts at offset 32.
     ct[32 + 4] ^= b'X' ^ b';';
@@ -67,7 +67,7 @@ fn not_admin_by_default() {
     let key = aes::Key::random();
     let iv = aes::random_iv();
     let ct = encrypt_cookie("mbp", &key, &iv);
-    assert_eq!(is_admin(&ct, &key, &iv), false);
+    assert!(!is_admin(&ct, &key, &iv));
 }
 
 #[test]
@@ -75,5 +75,5 @@ fn direct_injection_is_blocked_by_quoting() {
     let key = aes::Key::random();
     let iv = aes::random_iv();
     let ct = encrypt_cookie(";admin=true", &key, &iv);
-    assert_eq!(is_admin(&ct, &key, &iv), false);
+    assert!(!is_admin(&ct, &key, &iv));
 }

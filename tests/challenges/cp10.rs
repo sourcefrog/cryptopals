@@ -14,7 +14,7 @@ fn challenge_10() {
     let key = aes::Key::from_slice(b"YELLOW SUBMARINE");
     let padded = decrypt_aes_cbc(&input, &iv, &key);
     let plain = unpad(&padded).unwrap();
-    println!("{}", bytes_to_lossy_ascii(&plain));
+    println!("{}", bytes_to_lossy_ascii(plain));
     let plain = String::from_utf8(plain.to_owned()).expect("plaintext is not ascii");
     assert!(plain.contains("Lay down and boogie and play that funky music till you die."));
 }

@@ -25,9 +25,9 @@ const TARGETS: &[&str] = &[
 fn select_and_encrypt(key: &aes::Key) -> (Vec<u8>, [u8; 16]) {
     let iv = random_iv();
     let mut rng = rand::thread_rng();
-    let plain = base64_to_bytes(&TARGETS.choose(&mut rng).unwrap());
+    let plain = base64_to_bytes(TARGETS.choose(&mut rng).unwrap());
     let padded = pkcs7::pad(plain.as_slice(), aes::BLOCKSIZE);
-    let ct = encrypt_aes_cbc(&padded, &iv, &key);
+    let ct = encrypt_aes_cbc(&padded, &iv, key);
     (ct, iv)
 }
 
