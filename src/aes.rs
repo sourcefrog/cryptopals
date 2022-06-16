@@ -23,40 +23,20 @@ impl Key {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Iv([u8; 16]);
-
-impl Iv {
-    pub fn as_slice(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-
-    pub fn as_mut(&mut self) -> &mut [u8] {
-        self.0.as_mut()
-    }
-
-    pub fn random() -> Iv {
-        let mut key = [0u8; BLOCKSIZE];
-        thread_rng().fill(&mut key);
-        Iv(key)
-    }
-
-    pub fn from_slice(iv: &[u8]) -> Iv {
-        Iv(iv.try_into().expect("wrong length"))
-    }
-
-    pub fn from_array(iv: [u8; 16]) -> Iv {
-        Iv(iv)
-    }
+pub fn random_iv() -> [u8; 16] {
+    let mut key = [0u8; BLOCKSIZE];
+    thread_rng().fill(&mut key);
+    key
 }
 
 /// Decrypt CBC.
 ///
 /// Does not do padding.
 #[must_use]
-pub fn decrypt_aes_cbc(ct: &[u8], iv: &Iv, key: &Key) -> Vec<u8> {
+pub fn decrypt_aes_cbc(ct: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     let cipher = Aes128::new(&key.0);
-    let mut last_block: &[u8] = iv.as_slice();
+    assert_eq!(iv.len(), BLOCKSIZE);
+    let mut last_block: &[u8] = iv;
     let mut plain: Vec<u8> = Vec::with_capacity(ct.len());
     let mut buf: GenericArray<u8, U16> = GenericArray::default();
     for block in ct.chunks(BLOCKSIZE) {
@@ -75,9 +55,10 @@ pub fn decrypt_aes_cbc(ct: &[u8], iv: &Iv, key: &Key) -> Vec<u8> {
 ///
 /// The plaintext must be whole blocks; this does not add padding.
 #[must_use]
-pub fn encrypt_aes_cbc(plain: &[u8], iv: &Iv, key: &Key) -> Vec<u8> {
+pub fn encrypt_aes_cbc(plain: &[u8], iv: &[u8], key: &Key) -> Vec<u8> {
     let cipher = Aes128::new(&key.0);
-    let mut prev_ct: GenericArray<u8, U16> = GenericArray::clone_from_slice(iv.as_slice());
+    assert_eq!(iv.len(), BLOCKSIZE);
+    let mut prev_ct: GenericArray<u8, U16> = GenericArray::clone_from_slice(iv);
     let mut ct: Vec<u8> = Vec::with_capacity(plain.len());
     let mut buf: GenericArray<u8, U16> = GenericArray::default();
     for block in plain.chunks(BLOCKSIZE) {
@@ -133,7 +114,7 @@ mod test {
         #[test]
         fn roundtrip_aes_cbc_padded(plain: Vec<u8>) {
             let key = Key::random();
-            let iv = Iv::from_array([0u8; 16]);
+            let iv = random_iv();
             let padded = pkcs7::pad(&plain, BLOCKSIZE);
             let ct = encrypt_aes_cbc(&padded, &iv, &key);
             let ret = decrypt_aes_cbc(&ct, &iv, &key);
@@ -144,7 +125,7 @@ mod test {
         fn roundtrip_aes_cbc_unpadded(plain: Vec<u8>) {
             if plain.len() % 16 == 0 {
                 let key = Key::random();
-                let iv = Iv::from_array([0u8; 16]);
+                let iv = [0u8; 16];
                 let ct = encrypt_aes_cbc(&plain, &iv, &key);
                 let ret = decrypt_aes_cbc(&ct, &iv, &key);
                 assert_eq!(plain, ret);

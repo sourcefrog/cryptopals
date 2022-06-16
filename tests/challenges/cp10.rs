@@ -10,7 +10,7 @@ use cryptopals::strs::bytes_to_lossy_ascii;
 #[test]
 fn challenge_10() {
     let input = base64_file_to_bytes("input/10.txt");
-    let iv = aes::Iv::from_array([0u8; 16]);
+    let iv = [0u8; 16];
     let key = aes::Key::from_slice(b"YELLOW SUBMARINE");
     let padded = decrypt_aes_cbc(&input, &iv, &key);
     let plain = unpad(&padded).unwrap();

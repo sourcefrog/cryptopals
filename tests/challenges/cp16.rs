@@ -8,7 +8,7 @@ use cryptopals::strs::bytes_to_lossy_ascii;
 
 /// Encrypt a string including quoted user-supplied data with a prefix and
 /// suffix.
-fn encrypt_cookie(userdata: &str, secret_key: &aes::Key, iv: &aes::Iv) -> Vec<u8> {
+fn encrypt_cookie(userdata: &str, secret_key: &aes::Key, iv: &[u8]) -> Vec<u8> {
     let mut plain: Vec<u8> = b"comment1=cooking%20MCs;userdata=".to_vec();
     // todo!("escape userdata");
     let userdata = userdata.replace(';', "%3b").replace('=', "%3d");
@@ -20,7 +20,7 @@ fn encrypt_cookie(userdata: &str, secret_key: &aes::Key, iv: &aes::Iv) -> Vec<u8
 
 /// Take an encrypted cookie and say whether the contents indicate that the user
 /// is admin.
-fn is_admin(cookie_ct: &[u8], secret_key: &aes::Key, iv: &aes::Iv) -> bool {
+fn is_admin(cookie_ct: &[u8], secret_key: &aes::Key, iv: &[u8]) -> bool {
     if let Some(plain) = unpad(&decrypt_aes_cbc(&cookie_ct, iv, secret_key)) {
         println!("{}", bytes_to_lossy_ascii(&plain));
         let plain_str = String::from_utf8_lossy(&plain);
@@ -51,7 +51,7 @@ fn challenge_16() {
     // one sacrifical block, and then one target block containing "XadminYtrueX"
     // preceded by 4 bytes more of padding.
     let key = aes::Key::random();
-    let iv = aes::Iv::random();
+    let iv = aes::random_iv();
     let userdata = "0123456789abcdef,,,,XadminYtrueX";
     let mut ct = encrypt_cookie(&userdata, &key, &iv);
     // Within the target block, we want to flip X to ';' at offset 4 and offset 15.
@@ -65,7 +65,7 @@ fn challenge_16() {
 #[test]
 fn not_admin_by_default() {
     let key = aes::Key::random();
-    let iv = aes::Iv::random();
+    let iv = aes::random_iv();
     let ct = encrypt_cookie("mbp", &key, &iv);
     assert_eq!(is_admin(&ct, &key, &iv), false);
 }
@@ -73,7 +73,7 @@ fn not_admin_by_default() {
 #[test]
 fn direct_injection_is_blocked_by_quoting() {
     let key = aes::Key::random();
-    let iv = aes::Iv::random();
+    let iv = aes::random_iv();
     let ct = encrypt_cookie(";admin=true", &key, &iv);
     assert_eq!(is_admin(&ct, &key, &iv), false);
 }

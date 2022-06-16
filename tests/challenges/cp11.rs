@@ -5,7 +5,7 @@
 use proptest::prelude::*;
 use rand::Rng;
 
-use cryptopals::aes::{encrypt_aes_cbc, encrypt_aes_ecb, Iv, Key};
+use cryptopals::aes::{encrypt_aes_cbc, encrypt_aes_ecb, random_iv, Key};
 use cryptopals::detect::detect_aes_ecb;
 use cryptopals::pkcs7;
 
@@ -26,7 +26,7 @@ fn encryption_oracle(plain: &[u8], use_ecb: bool) -> Vec<u8> {
     if use_ecb {
         encrypt_aes_ecb(&padded, &key)
     } else {
-        let iv = Iv::random();
+        let iv = random_iv();
         encrypt_aes_cbc(&padded, &iv, &key)
     }
 }
