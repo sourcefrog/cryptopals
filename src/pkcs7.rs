@@ -23,12 +23,12 @@ pub fn pad(b: &[u8], sz: usize) -> Vec<u8> {
 #[must_use]
 pub fn unpad(b: &[u8]) -> Option<&[u8]> {
     let l = b.len();
-    if let Some(&pad) = b.last() {
-        let pad_len = pad as usize;
-        if pad_len <= l {
+    if let Some(&pad_byte) = b.last() {
+        let pad_len = pad_byte as usize;
+        if pad_len > 0 && pad_len <= l {
             let (body, padding) = b.split_at(l - pad_len);
             debug_assert_eq!(padding.len(), pad_len);
-            if padding.iter().all(|c| *c == pad) {
+            if padding.iter().all(|c| *c == pad_byte) {
                 Some(body)
             } else {
                 None
@@ -37,7 +37,7 @@ pub fn unpad(b: &[u8]) -> Option<&[u8]> {
             None
         }
     } else {
-        None
+        None // empty slice
     }
 }
 
@@ -64,6 +64,7 @@ mod test {
         assert_eq!(unpad(b""), None);
         assert_eq!(unpad(&[3u8]), None);
         assert_eq!(unpad(&[0, 1, 2, 3u8]), None);
+        assert_eq!(unpad(&[0u8; 16]), None);
     }
 
     #[test]

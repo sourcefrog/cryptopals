@@ -2,8 +2,11 @@
 //!
 //! <https://cryptopals.com/sets/3/challenges/17>
 
-use cryptopals::aes;
+use cryptopals::aes::{self, encrypt_aes_cbc, Iv, Key};
+use cryptopals::base64::base64_to_bytes;
+use cryptopals::hex::bytes_to_hex;
 use cryptopals::pkcs7;
+use cryptopals::strs::bytes_to_lossy_ascii;
 use rand::prelude::SliceRandom;
 
 const TARGETS: &[&str] = &[
@@ -19,35 +22,114 @@ const TARGETS: &[&str] = &[
     "MDAwMDA5aXRoIG15IHJhZy10b3AgZG93biBzbyBteSBoYWlyIGNhbiBibG93",
 ];
 
-fn select_and_encrypt() -> (Vec<u8>, aes::Key, aes::Iv) {
-    let key = aes::Key::random();
+fn select_and_encrypt(key: &aes::Key) -> (Vec<u8>, aes::Iv) {
     let iv = aes::Iv::random();
     let mut rng = rand::thread_rng();
-    let target = TARGETS.choose(&mut rng).unwrap();
-    let padded = pkcs7::pad(target.as_bytes(), aes::BLOCKSIZE);
-    let ct = aes::encrypt_aes_cbc(&padded, &iv, &key);
-    (ct, key, iv)
+    let plain = base64_to_bytes(&TARGETS.choose(&mut rng).unwrap());
+    let padded = pkcs7::pad(plain.as_slice(), aes::BLOCKSIZE);
+    let ct = encrypt_aes_cbc(&padded, &iv, &key);
+    (ct, iv)
 }
 
 /// Returns true if the padding is valid
-fn check_padding(ct: &[u8], key: &aes::Key, iv: &aes::Iv) -> bool {
+fn check_padding(ct: &[u8], iv: &aes::Iv, key: &aes::Key) -> bool {
     let plain = aes::decrypt_aes_cbc(ct, iv, key);
-    pkcs7::unpad(&plain).is_some()
+    let is_padded = pkcs7::unpad(&plain).is_some();
+    if is_padded {
+        println!("plaintext {} is_padded={is_padded}", bytes_to_hex(&plain));
+    }
+    is_padded
+}
+
+/// Recover the plaintext using a padding oracle attack.
+fn padding_attack<P>(ct: &[u8], iv: &aes::Iv, padding_oracle: P) -> Vec<u8>
+where
+    P: Fn(&[u8], &Iv) -> bool,
+{
+    // Work on just one block of the cyphertext at a time.
+    assert!(ct.len() >= 16);
+    assert!(ct.len() & 0xf == 0);
+    let blk = &ct[0..16];
+    let mut miv = iv.clone();
+    debug_assert_eq!(miv.as_mut().len(), 16);
+    let mut recovered = vec![0u8; 16];
+    'i: for p in 1u8..=16 {
+        // padding value to insert
+        let i = 16 - (p as usize); // position to insert it
+        for j in (i + 1)..=15 {
+            // Update later bytes to all match a run of [p; i].
+            miv.as_mut()[j] = recovered[j] ^ (p as u8) ^ iv.as_slice()[j];
+        }
+        for b in 0..=255u8 {
+            miv.as_mut()[i] = b;
+            if padding_oracle(blk, &miv) {
+                // TODO: Taking the first value might not be right if it wraps around...
+                let r = b ^ p ^ iv.as_slice()[i];
+                println!("found valid padding for byte {i} b {r} {:?}", (r as char));
+                recovered[i] = r;
+                continue 'i;
+            }
+        }
+        unreachable!("no acceptable mutation found for byte {i}");
+    }
+    // If there's more than one valid value then they probably correspond to padding of
+    // 1, 2, etc. For now we could assume it's 1.
+    // We know actual_pt ^ bm = 1
+    recovered
+}
+
+#[test]
+fn construct_padding_using_iv() {
+    let key = Key::random();
+    let plain = [0u8; 16];
+    let mut iv = Iv::from_slice(&[0u8; 16]);
+    let ct = encrypt_aes_cbc(&plain, &iv, &key);
+    assert!(!check_padding(&ct, &iv, &key));
+
+    // Use an IV that will make the last byte 0x01, and therefore make it look padded.
+    iv.as_mut()[15] = 0x01;
+    assert!(check_padding(&ct, &iv, &key));
+
+    // Try making the last 2 bytes 0x02.
+    iv.as_mut()[15] = 0x02;
+    iv.as_mut()[14] = 0x02;
+    assert!(check_padding(&ct, &iv, &key));
+}
+
+#[test]
+fn challenge_17() {
+    let key = Key::random();
+    let (ct, iv) = select_and_encrypt(&key);
+    let recovered = padding_attack(&ct, &iv, |ct, iv| check_padding(ct, iv, &key));
+    println!("recovered: {}", bytes_to_lossy_ascii(&recovered));
+}
+
+/// Can we extract a known plaintext from a single block?
+#[test]
+fn padding_attack_with_known_text() {
+    let plain = b"0123456789abcdef";
+    let iv = Iv::random();
+    let key = Key::random();
+    let ct = encrypt_aes_cbc(plain.as_slice(), &iv, &key);
+    let recovered = padding_attack(&ct, &iv, |ct, iv| check_padding(ct, iv, &key));
+    assert_eq!(&recovered, plain);
 }
 
 #[test]
 fn basic_roundtrip_is_padded() {
     for _ in 0..99 {
-        let (ct, key, iv) = select_and_encrypt();
-        assert!(check_padding(&ct, &key, &iv));
+        let key = aes::Key::random();
+        let (ct, iv) = select_and_encrypt(&key);
+        assert!(check_padding(&ct, &iv, &key));
     }
 }
 
 #[test]
 fn last_block_is_always_padded() {
     for _ in 0..99 {
-        let (ct, key, iv) = select_and_encrypt();
+        let key = aes::Key::random();
+        let (ct, iv) = select_and_encrypt(&key);
         let o = (ct.len() - 1) & !0xff;
-        assert!(check_padding(&ct[o..], &key, &iv));
+        assert!(check_padding(&ct[o..], &iv, &key,));
     }
 }

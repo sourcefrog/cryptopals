@@ -23,11 +23,16 @@ impl Key {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
 pub struct Iv([u8; 16]);
 
 impl Iv {
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
+    }
+
+    pub fn as_mut(&mut self) -> &mut [u8] {
+        self.0.as_mut()
     }
 
     pub fn random() -> Iv {
