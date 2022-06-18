@@ -2,11 +2,13 @@
 //!
 //! <https://cryptopals.com/sets/3/challenges/17>
 
-use cryptopals::aes::{self, encrypt_aes_cbc, random_iv, Key};
+use eyre::{Context, Result};
+
+use cryptopals::aes::{self, encrypt_aes_cbc, random_iv, Key, BLOCKSIZE};
 use cryptopals::base64::base64_to_bytes;
 use cryptopals::hex::bytes_to_hex;
-use cryptopals::pkcs7;
-use cryptopals::strs::bytes_to_lossy_ascii;
+use cryptopals::pkcs7::{self, unpad};
+
 use rand::prelude::SliceRandom;
 
 const TARGETS: &[&str] = &[
@@ -46,35 +48,39 @@ fn padding_attack<P>(ct: &[u8], iv: &[u8], padding_oracle: P) -> Vec<u8>
 where
     P: Fn(&[u8], &[u8]) -> bool,
 {
+    let mut last_ct_blk: &[u8] = iv;
     // Work on just one block of the cyphertext at a time.
-    assert!(ct.len() >= 16);
-    assert!(ct.len() & 0xf == 0);
-    let blk = &ct[0..16];
-    let mut miv = iv.to_vec();
-    debug_assert_eq!(miv.len(), 16);
-    let mut recovered = vec![0u8; 16];
-    'i: for p in 1u8..=16 {
-        // padding value to insert
-        let i = 16 - (p as usize); // position to insert it
-        for j in (i + 1)..=15 {
-            // Update later bytes to all match a run of [p; i].
-            miv[j] = recovered[j] ^ (p as u8) ^ iv[j];
-        }
-        for b in 0..=255u8 {
-            miv[i] = b;
-            if padding_oracle(blk, &miv) {
-                // TODO: Taking the first value might not be right if it wraps around...
-                let r = b ^ p ^ iv[i];
-                println!("found valid padding for byte {i} b {r} {:?}", (r as char));
-                recovered[i] = r;
-                continue 'i;
+    assert!(ct.len() >= BLOCKSIZE);
+    assert!(ct.len() & (BLOCKSIZE - 1) == 0);
+    let mut recovered = vec![0; ct.len()];
+    for (iblk, blk) in ct.chunks_exact(BLOCKSIZE).enumerate() {
+        let mut miv = vec![0; BLOCKSIZE];
+        'i: for p in 1u8..=16 {
+            // padding value to insert
+            let i = 16 - (p as usize); // position to insert it
+            for j in (i + 1)..=15 {
+                // Update later bytes to all match a run of [p; i].
+                miv[j] = recovered[iblk * BLOCKSIZE + j] ^ (p as u8) ^ last_ct_blk[j];
             }
+            for b in 0..=255u8 {
+                miv[i] = b;
+                if padding_oracle(blk, &miv) {
+                    // TODO: Taking the first value might not be right if it is close to 0:
+                    // perhaps the correct next value is near 0xff??
+                    let r = b ^ p ^ last_ct_blk[i];
+                    let ioverall = iblk * BLOCKSIZE + i;
+                    println!(
+                        "found valid padding for byte {ioverall} b {r} {:?}",
+                        (r as char)
+                    );
+                    recovered[ioverall] = r;
+                    continue 'i;
+                }
+            }
+            unreachable!("no acceptable mutation found for byte {i} in block {iblk}");
         }
-        unreachable!("no acceptable mutation found for byte {i}");
+        last_ct_blk = blk;
     }
-    // If there's more than one valid value then they probably correspond to padding of
-    // 1, 2, etc. For now we could assume it's 1.
-    // We know actual_pt ^ bm = 1
     recovered
 }
 
@@ -97,11 +103,78 @@ fn construct_padding_using_iv() {
 }
 
 #[test]
-fn challenge_17() {
+/// Recover all the strings
+fn challenge_17() -> Result<()> {
+    let n = TARGETS.len();
+    let mut all: Vec<String> = vec![String::new(); n];
+    let key = Key::random();
+    let mut got = 0;
+    while got < n {
+        let (ct, iv) = select_and_encrypt(&key);
+        let recovered = padding_attack(&ct, &iv, |ct, iv| check_padding(ct, iv, &key));
+        let recovered = unpad(recovered.as_ref())
+            .unwrap_or_else(|| {
+                panic!(
+                    "recovered bytes do not seem to be padded: {}",
+                    bytes_to_hex(&recovered.as_ref())
+                )
+            })
+            .to_owned();
+        let recovered = String::from_utf8_lossy(&recovered);
+        println!("recovered: {:?}", recovered);
+        let (prefix, message) = recovered.split_at(6);
+        let pt_index: usize = prefix
+            .parse()
+            .with_context(|| format!("not a decimal: {:?}", prefix))?;
+        if all[pt_index].is_empty() {
+            got += 1;
+            all[pt_index] = message.to_owned();
+        } else {
+            assert_eq!(all[pt_index], message);
+        }
+    }
+    for line in all {
+        println!("{line:?}");
+    }
+    Ok(())
+}
+
+#[test]
+fn recover_one_random_string() -> Result<()> {
+    let expected: &[&str] = &[
+        "000000Now that the party is jumping",
+        "000001With the bass kicked in and the Vega's are pumpin'",
+        "000002Quick to the point, to the point, no faking",
+        "000003Cooking MC's like a pound of bacon",
+        "000004Burning 'em, if you ain't quick and nimble",
+        "000005I go crazy when I hear a cymbal",
+        "000006nd a high hat with a souped up tempo",
+        "000007I'm on a roll, it's time to go solo",
+        // Strangely the last two lines do seem to be missing some letters,
+        // which can be confirmed from the base64-obscured plaintext.
+        "000008ollin' in my five point oh",
+        "000009ith my rag-top down so my hair can blow",
+    ];
     let key = Key::random();
     let (ct, iv) = select_and_encrypt(&key);
     let recovered = padding_attack(&ct, &iv, |ct, iv| check_padding(ct, iv, &key));
-    println!("recovered: {}", bytes_to_lossy_ascii(&recovered));
+    let recovered = unpad(recovered.as_ref())
+        .unwrap_or_else(|| {
+            panic!(
+                "recovered bytes do not seem to be padded: {}",
+                bytes_to_hex(&recovered.as_ref())
+            )
+        })
+        .to_owned();
+    let recovered = String::from_utf8(recovered.clone()).with_context(|| {
+        format!(
+            "recovered text is not UTF-8: {:?}",
+            bytes_to_hex(&recovered)
+        )
+    })?;
+    println!("recovered: {:?}", recovered);
+    assert!(expected.contains(&recovered.as_ref()));
+    Ok(())
 }
 
 /// Can we extract a known plaintext from a single block?

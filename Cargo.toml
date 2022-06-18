@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 aes = "0.8.1"
 bytes = "1.1.0"
+eyre = "*"
 lazy_static = "1.4.0"
 proptest = "1.0.0"
 rand = "0.8.5"
